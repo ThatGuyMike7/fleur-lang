@@ -1,14 +1,14 @@
-message(STATUS "CMake version is ${CMAKE_VERSION}")
-if(${CMAKE_VERSION} VERSION_LESS "3.18.1")
-    message(STATUS "At least CMake 3.18.1 is required")
-endif()
+#message(STATUS "CMake version is ${CMAKE_VERSION}")
+#if(${CMAKE_VERSION} VERSION_LESS "3.18.1")
+#    message(STATUS "At least CMake 3.18.1 is required")
+#endif()
 
-cmake_minimum_required (VERSION 3.18.1)
+cmake_minimum_required (VERSION 3.16)
 project (fleur CXX)
 
 # Add source files.
 # "GLOB_RECURSE" for subfolders, otherwise "GLOB".
-file(GLOB SOURCES
+file(GLOB_RECURSE SOURCES
     "${CMAKE_SOURCE_DIR}/src/*.cpp"
 )
 
@@ -64,7 +64,7 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
     # from appending a per-configuration sub-directory to the specified path.
     RUNTIME_OUTPUT_DIRECTORY ${FLEUR_OUTPUT_DIR}/$<0:>
     OUTPUT_NAME "fleurc"
-    CXX_STANDARD 17
+    CXX_STANDARD 20
     CXX_STANDARD_REQUIRED YES
     CXX_EXTENSIONS NO
 )
@@ -72,15 +72,18 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 # Set warning level.
 if(MSVC)
     target_compile_options(${PROJECT_NAME} PRIVATE
-        /WX     # Treat warnings as errors.
-        /W4     # Warning level.
-        /wd4458 # Suppress warning "declaration of 'x' hides class member".
+        /WX                 # Treat warnings as errors.
+        /W4                 # Warning level.
+        /wd4458             # Suppress warning "declaration of 'x' hides class member".
+        /wd4996             # Suppress warning "'fopen': This function or variable may be unsafe. Consider using fopen_s instead."
+        #/fsanitize=address
     )
 else()
     target_compile_options(${PROJECT_NAME} PRIVATE
-        -pedantic     # No extensions.
-        -Wall -Wextra # Warnings.
-        -Werror       # Warnings are errors.
+        -pedantic           # No extensions.
+        -Wall -Wextra       # Warnings.
+        -Werror             # Warnings are errors.
+        #-fsanitize=address
     )
 endif()
 
