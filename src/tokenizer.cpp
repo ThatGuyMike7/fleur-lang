@@ -3,9 +3,26 @@
 #include <util/string.hpp>
 
 #include <string_view>
+#include <vector>
 
 namespace Fleur
 {
+    SymbolToken const* SymbolTokenWithCharAt(char c, u64 index)
+    {
+        for (u64 i = 0; i < SYMBOL_TOKENS.size(); i++)
+        {
+            SymbolToken const *current = &SYMBOL_TOKENS[i];
+            if (current->string.length() >= index)
+            {
+                if (current->string[index] == c)
+                {
+                    return current;
+                }
+            }
+        }
+        return nullptr;
+    }
+
     Tokenizer::Tokenizer(Util::String &&source)
         : source(std::move(source))
     {
@@ -16,83 +33,89 @@ namespace Fleur
         source.Free();
     }
 
-    bool Tokenizer::Advance()
+    bool Tokenizer::Peek(char *peek, u64 amount)
     {
-        index++;
-        if (index == source.length)
+        if (index + amount >= source.length)
         {
             return false;
         }
 
-        c = source.data[index];
+        *peek = source.data[index + amount];
         return true;
     }
 
-    bool Tokenizer::Peek(char *c)
+    void Tokenizer::Eat(u64 amount)
     {
-        if (index + 1 == source.length)
-        {
-            return false;
-        }
-
-        *c = source.data[index + 1];
-        return true;
+        index += amount;
+        lineColumn += amount;
     }
 
-    bool Tokenizer::SkipWhitespace()
+    bool Tokenizer::EatWhitespace()
     {
         while (true)
         {
-            if (c == '\n')
-            {
-                lineNumber++;
-                lineColumn = 1;
-            }
-            else if (!Util::IsWhitespace(c))
+            char c;
+            if (!Peek(&c))
             {
                 return false;
             }
 
-            if (!Advance())
+            if (c == '\n')
             {
-                return false;
+                lineNumber++;
+                lineColumn = 0;
+                index++;
+            }
+            else if(Util::IsWhitespaceNoNewline(c))
+            {
+                lineColumn++;
+                index++;
+            }
+            else
+            {
+                return true;
             }
         }
-        return true;
     }
 
     void Tokenizer::AddIdentifierToken(std::string_view string)
     {
-        tokens.push_back(Token{ TokenType::Identifier, string, lineNumber, lineColumn });
+        tokens.push_back(Token{ TokenType::IDENTIFIER, string, lineNumber, lineColumn });
     }
 
     void Tokenizer::AddIntegerToken(std::string_view string)
     {
-        tokens.push_back(Token{ TokenType::Integer, string, lineNumber, lineColumn });
+        tokens.push_back(Token{ TokenType::INTEGER, string, lineNumber, lineColumn });
+    }
+
+    void Tokenizer::AddSymbolToken(std::string_view string, TokenType tokenType)
+    {
+        tokens.push_back(Token{ tokenType, string, lineNumber, lineColumn });
     }
 
     bool Tokenizer::Identifier()
     {
-        char *begin = source.data + index;
+        char const *begin = source.data + index;
         u64 size = 1;
 
         while (true)
         {
             char peek;
-            if (!Peek(&peek))
+            if (!Peek(&peek, size))
             {
                 AddIdentifierToken(std::string_view{ begin, size });
+                Eat(size - 1);
                 return false;
             }
 
             if (Util::IsLetter(peek) || Util::IsDigit(peek))
             {
                 size++;
-                Advance();
             }
             else
             {
                 AddIdentifierToken(std::string_view{ begin, size });
+                Eat(size - 1);
                 return true;
             }
         }
@@ -100,28 +123,68 @@ namespace Fleur
 
     bool Tokenizer::Number()
     {
-        char *begin = source.data + index;
+        char const *begin = source.data + index;
         u64 size = 1;
 
         while (true)
         {
             char peek;
-            if (!Peek(&peek))
+            if (!Peek(&peek, size))
             {
                 AddIntegerToken(std::string_view{ begin, size });
+                Eat(size - 1);
                 return false;
             }
 
             if (Util::IsDigit(peek))
             {
                 size++;
-                Advance();
             }
             else
             {
                 AddIntegerToken(std::string_view{ begin, size });
+                Eat(size - 1);
                 return true;
             }
+        }
+    }
+
+    bool Tokenizer::SymbolToken()
+    {
+        char c = source.data[index];
+        Fleur::SymbolToken const *token = nullptr;
+
+        u64 i = 0;
+        while (true)
+        {
+            Fleur::SymbolToken const *nextToken = SymbolTokenWithCharAt(c, i);
+            if (nextToken == nullptr) // Either a full match or no match.
+            {
+                if (token == nullptr)
+                {
+                    // No match. This means the symbol is unknown.
+                    // TODO: Print Error: Unknown token.
+                }
+                else
+                {
+                    // Note: String view is into `SYMBOL_TOKENS`, not into the source file.
+                    AddSymbolToken(token->string, token->tokenType);
+                    Eat(i - 1);
+                }
+
+                return true;
+            }
+
+            if (!Peek(&c, i + 1))
+            {
+                // EOF. Add what we have.
+                AddSymbolToken(nextToken->string, nextToken->tokenType);
+                Eat(i);
+                return false;
+            }
+
+            token = nextToken;
+            i++;
         }
     }
 
@@ -133,17 +196,23 @@ namespace Fleur
             return;
         }
 
-        index = 0;
-        c = source.data[index];
-        lineColumn = 1;
+        index = static_cast<u64>(-1); // Wraparound is defined for unsigned types.
+        lineColumn = 0;
         lineNumber = 1;
 
         while (true)
         {
-            if (!Advance())
+            if (!EatWhitespace())
             {
                 return;
             }
+
+            char c;
+            if (!Peek(&c))
+            {
+                return;
+            }
+            Eat();
 
             if (Util::IsLetter(c))
             {
@@ -155,6 +224,13 @@ namespace Fleur
             else if (Util::IsDigit(c))
             {
                 if (!Number())
+                {
+                    return;
+                }
+            }
+            else
+            {
+                if (!SymbolToken())
                 {
                     return;
                 }

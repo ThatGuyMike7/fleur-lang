@@ -3,6 +3,7 @@
 
 #include <util/io.hpp>
 
+#include <string>
 #include <string_view>
 #include <vector>
 
@@ -10,8 +11,40 @@ namespace Fleur
 {
     enum class TokenType : u64
     {
-        Identifier,
-        Integer
+        IDENTIFIER,
+        INTEGER,
+        LINE_COMMENT,
+        MULTILINE_COMMENT_BEGIN,
+        MULTILINE_COMMENT_END,
+        SEMICOLON,
+        COLON,
+        DOT,
+        COMMA,
+        OPEN_ROUND_BRACKET,
+        CLOSE_ROUND_BRACKET,
+        OPEN_SQUARE_BRACKET,
+        CLOSE_SQUARE_BRACKET,
+        OPEN_CURLY_BRACKET,
+        CLOSE_CURLY_BRACKET,
+        POINTER,
+        QUESTION_MARK,
+        ASSIGNMENT,
+        PLUS,
+        MINUS,
+        MULTIPLY,
+        DIVIDE,
+        AMPERSAND,
+        VERTICAL_BAR,
+        EXCLAMATION_MARK,
+        LESS,
+        GREATER,
+        DOUBLE_AMPERSAND,
+        DOUBLE_VERTICAL_BAR,
+        NOT_EQUAL,
+        EQUAL,
+        LESS_OR_EQUAL,
+        GREATER_OR_EQUAL,
+        DOUBLE_COLON
     };
 
     struct Token
@@ -21,6 +54,50 @@ namespace Fleur
         u64 lineNumber;
         u64 lineColumn;
     };
+
+    struct SymbolToken
+    {
+        std::string string;
+        TokenType tokenType;
+    };
+
+    inline const std::vector<SymbolToken> SYMBOL_TOKENS = {
+        { "//", TokenType::LINE_COMMENT },
+        { "/*", TokenType::MULTILINE_COMMENT_BEGIN },
+        { "*/", TokenType::MULTILINE_COMMENT_END },
+        { ";", TokenType::SEMICOLON },
+        { "*", TokenType::COLON },
+        { ".", TokenType::DOT },
+        { ",", TokenType::COMMA },
+        { "(", TokenType::OPEN_ROUND_BRACKET },
+        { ")", TokenType::CLOSE_ROUND_BRACKET },
+        { "[", TokenType::OPEN_SQUARE_BRACKET },
+        { "]", TokenType::CLOSE_SQUARE_BRACKET },
+        { "{", TokenType::OPEN_CURLY_BRACKET },
+        { "}", TokenType::CLOSE_CURLY_BRACKET },
+        { "^", TokenType::POINTER },
+        { "?", TokenType::QUESTION_MARK },
+        { "=", TokenType::ASSIGNMENT },
+        { "+", TokenType::PLUS },
+        { "-", TokenType::MINUS },
+        { "*", TokenType::MULTIPLY },
+        { "/", TokenType::DIVIDE },
+        { "&", TokenType::AMPERSAND },
+        { "|", TokenType::VERTICAL_BAR },
+        { "!", TokenType::EXCLAMATION_MARK },
+        { "<", TokenType::LESS },
+        { ">", TokenType::GREATER },
+        { "&&", TokenType::DOUBLE_AMPERSAND },
+        { "||", TokenType::DOUBLE_VERTICAL_BAR },
+        { "!=", TokenType::NOT_EQUAL },
+        { "==", TokenType::EQUAL },
+        { "<=", TokenType::LESS_OR_EQUAL },
+        { ">=", TokenType::GREATER_OR_EQUAL },
+        { "::", TokenType::DOUBLE_COLON }
+    };
+
+    // Returns `nullptr` if no such token exists.
+    SymbolToken const* SymbolTokenWithCharAt(char c, u64 index);
 
     class Tokenizer
     {
@@ -34,22 +111,27 @@ namespace Fleur
     private:
         Util::String source;
         u64 index;
-        char c;
 
         u64 lineColumn;
         u64 lineNumber;
 
         //std::vector<Token> tokens;
 
-        bool Advance();
-        bool Peek(char *c);
-        bool SkipWhitespace();
+        bool Peek(char *peek, u64 amount = 1);
+
+        // Note: Only eat what you peeked before!
+        void Eat(u64 amount = 1);
+
+        // Skip whitespace and manage line number.
+        bool EatWhitespace();
 
         void AddIdentifierToken(std::string_view string);
         void AddIntegerToken(std::string_view string);
+        void AddSymbolToken(std::string_view string, TokenType tokenType);
 
         bool Identifier();
         bool Number();
+        bool SymbolToken();
     };
 }
 

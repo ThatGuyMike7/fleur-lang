@@ -1,8 +1,8 @@
- # M Language Specification
+ # Fleur Language Specification
 
 ## Introduction
 
-This document specifies the **M** programming language.
+This document specifies the **Fleur** programming language.
 
 ## Source Code Representation
 Source Code is text encoded in UTF-8 with LF line breaks.
@@ -18,7 +18,11 @@ The syntax is specified using Extended Backus-Naur Form (eBNF).
     - /* */ pairs match like brackets (inner first) which allows them to be nested.
 *)
 
-token = identifier | "//" | "/*" | "*/" | ";" | "," | "(" | ")" | "{" | "}" ;
+token = identifier | number |
+        "//" | "/*" | "*/" | ";" | ":" | "." | "," | "(" | ")" | "[" | "]" | "{" | "}" | "^" | "?" |
+        "=" | "+" | "-" | "*" | "/" | "&" | "|" | "!" | "<" | ">" |
+        "&&" | "||" | "!=" | "==" | "<=" | ">=" | "::" |
+        "---" ;
 
 any_char = ? any character ? ;
 
@@ -37,6 +41,8 @@ signed_integer_literal_10 = "0" | (digit - "0") , { digit } ;
 unsigned_integer_literal_10 = signed_integer_literal_10 , "u" ;
 
 float_literal_10 = (integer , "f") | (integer , "." , { digit } , ["f"]) ;
+
+number = signed_integer_literal_10 | unsigned_integer_literal_10 | float_literal_10 ;
 
 struct_literal = identifier , "{" , { expr , "," } , expr , "}" ;
 
@@ -160,22 +166,22 @@ top_level_grammar =
 ```
 struct vec3
 {
-    x : f32,
-    y : f32,
-    z : f32,
+    x: f32,
+    y: f32,
+    z: f32,
 }
 
-fn mul_vec3(a : vec3, b : vec3) -> vec3
+fn mul_vec3(a: vec3, b: vec3) -> vec3
 {
     ret vec3{ a.x * b.x, a.y * b.y, a.z * b.z };
 }
 
-fn mul_vec3(a : s32, b : vec3) -> vec3
+fn mul_vec3(a: s32, b: vec3) -> vec3
 {
     ret vec3{ a * b.x, a * b.y, a * b.z };
 }
 
-fn zero_vec3(a : ^mut vec3)
+fn zero_vec3(a: ^mut vec3)
 {
     a^ = vec3{ 0f, 0f, 0.0 };
 }
