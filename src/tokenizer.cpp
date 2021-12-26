@@ -3,21 +3,51 @@
 #include <util/string.hpp>
 
 #include <string_view>
+#include <string>
 #include <vector>
+#include <iostream>
 
 namespace Fleur
 {
-    SymbolToken const* SymbolTokenWithCharAt(char c, u64 index)
+    std::vector<SymbolToken const*> SymbolTokensWithFirstChar(char c)
     {
+        std::vector<SymbolToken const*> result;
         for (u64 i = 0; i < SYMBOL_TOKENS.size(); i++)
         {
             SymbolToken const *current = &SYMBOL_TOKENS[i];
-            if (current->string.length() >= index)
+            if (current->string[0] == c)
             {
-                if (current->string[index] == c)
-                {
-                    return current;
-                }
+                result.push_back(current);
+            }
+        }
+        return result;
+    }
+
+    void SymbolTokensWithCharAt(std::vector<SymbolToken const*> *symbolTokens, char c, u64 index)
+    {
+        auto it = symbolTokens->begin();
+        while (it != symbolTokens->end())
+        {
+            if ((*it)->string.length() <= index ||
+                (*it)->string[index] != c)
+            {
+                it = symbolTokens->erase(it);
+            }
+            else
+            {
+                it++;
+            }
+        }
+    }
+
+    SymbolToken const* MatchSymbolToken(std::vector<SymbolToken const*> const &symbolTokens,
+        std::string_view match)
+    {
+        for (u64 i = 0; i < symbolTokens.size(); i++)
+        {
+            if (symbolTokens[i]->string == match)
+            {
+                return symbolTokens[i];
             }
         }
         return nullptr;
@@ -66,7 +96,7 @@ namespace Fleur
                 lineColumn = 0;
                 index++;
             }
-            else if(Util::IsWhitespaceNoNewline(c))
+            else if (Util::IsWhitespaceNoNewline(c))
             {
                 lineColumn++;
                 index++;
@@ -151,41 +181,72 @@ namespace Fleur
 
     bool Tokenizer::SymbolToken()
     {
-        char c = source.data[index];
-        Fleur::SymbolToken const *token = nullptr;
+        std::string str;
+        str += source.data[index];
 
-        u64 i = 0;
+        auto candidates = SymbolTokensWithFirstChar(str[0]);
         while (true)
         {
-            Fleur::SymbolToken const *nextToken = SymbolTokenWithCharAt(c, i);
-            if (nextToken == nullptr) // Either a full match or no match.
+            auto temp = candidates;
+
+            char peek;
+            if (!Peek(&peek, str.length()))
             {
-                if (token == nullptr)
+                // This is a situation where the string we have is shorter than some candidates.
+                // Find the element that matches exactly.
+                auto *match = MatchSymbolToken(candidates, str);
+                if (match == nullptr)
                 {
-                    // No match. This means the symbol is unknown.
-                    // TODO: Print Error: Unknown token.
+                    // Unknown token.
+                    // TODO: Error message.
                 }
                 else
                 {
-                    // Note: String view is into `SYMBOL_TOKENS`, not into the source file.
-                    AddSymbolToken(token->string, token->tokenType);
-                    Eat(i - 1);
+                    AddSymbolToken(match->string, match->tokenType);
                 }
 
-                return true;
-            }
-
-            if (!Peek(&c, i + 1))
-            {
-                // EOF. Add what we have.
-                AddSymbolToken(nextToken->string, nextToken->tokenType);
-                Eat(i);
+                Eat(str.length() - 1);
                 return false;
             }
 
-            token = nextToken;
-            i++;
+            SymbolTokensWithCharAt(&temp, peek, str.length());
+
+            if (temp.size() == 0)
+            {
+                break;
+            }
+            else
+            {
+                str += peek;
+                candidates = temp;
+            }
         }
+
+        // Find the element that matches exactly.
+        auto *match = MatchSymbolToken(candidates, str);
+
+        /*
+        std::cout << "----Candidates:" << std::endl;
+        for (u64 i = 0; i < candidates.size(); i++)
+        {
+            std::cout << candidates[i]->string << std::endl;
+        }
+        std::cout << "----str:" << std::endl;
+        std::cout << str << std::endl;
+        */
+
+        if (match == nullptr)
+        {
+            // Unknown token.
+            // TODO: Error message.
+        }
+        else
+        {
+            AddSymbolToken(match->string, match->tokenType);
+        }
+
+        Eat(str.length() - 1);
+        return true;
     }
 
     void Tokenizer::Tokenize()

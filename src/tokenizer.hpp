@@ -61,7 +61,7 @@ namespace Fleur
         TokenType tokenType;
     };
 
-    inline const std::vector<SymbolToken> SYMBOL_TOKENS = {
+    inline std::vector<SymbolToken> const SYMBOL_TOKENS = {
         { "//", TokenType::LINE_COMMENT },
         { "/*", TokenType::MULTILINE_COMMENT_BEGIN },
         { "*/", TokenType::MULTILINE_COMMENT_END },
@@ -96,8 +96,14 @@ namespace Fleur
         { "::", TokenType::DOUBLE_COLON }
     };
 
-    // Returns `nullptr` if no such token exists.
-    SymbolToken const* SymbolTokenWithCharAt(char c, u64 index);
+    // Returns every element of `SYMBOL_TOKENS` whose first character equals `c`.
+    std::vector<SymbolToken const*> SymbolTokensWithFirstChar(char c);
+
+    // Remove all elements from `symbolTokens` that do not have character `c` at `index`.
+    void SymbolTokensWithCharAt(std::vector<SymbolToken const*> *symbolTokens, char c, u64 index);
+
+    SymbolToken const* MatchSymbolToken(std::vector<SymbolToken const*> const &symbolTokens,
+        std::string_view match);
 
     class Tokenizer
     {
