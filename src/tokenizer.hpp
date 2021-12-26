@@ -66,7 +66,7 @@ namespace Fleur
         { "/*", TokenType::MULTILINE_COMMENT_BEGIN },
         { "*/", TokenType::MULTILINE_COMMENT_END },
         { ";", TokenType::SEMICOLON },
-        { "*", TokenType::COLON },
+        { ":", TokenType::COLON },
         { ".", TokenType::DOT },
         { ",", TokenType::COMMA },
         { "(", TokenType::OPEN_ROUND_BRACKET },
