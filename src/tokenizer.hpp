@@ -112,7 +112,7 @@ namespace Fleur
         ~Tokenizer();
 
         void Tokenize();
-        std::vector<Token> tokens;
+        std::vector<Token> const Tokens() const;
 
     private:
         Util::String source;
@@ -121,7 +121,7 @@ namespace Fleur
         u64 lineColumn;
         u64 lineNumber;
 
-        //std::vector<Token> tokens;
+        std::vector<Token> tokens;
 
         bool Peek(char *peek, u64 amount = 1);
 

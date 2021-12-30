@@ -298,4 +298,9 @@ namespace Fleur
             }
         }
     }
+
+    std::vector<Token> const Tokenizer::Tokens() const
+    {
+        return tokens;
+    }
 }

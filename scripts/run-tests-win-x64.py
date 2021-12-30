@@ -13,7 +13,7 @@ def run_test(path, name):
     global num_passed_tests
 
     test_working_directory = path
-    run_command = os.path.join("bin", "win-x64", "release", "test.exe")
+    run_command = os.path.join(".", "bin", "win-x64", "release", "test.exe")
 
     result = subprocess.run(run_command, shell = True, cwd = test_working_directory)
 
@@ -31,4 +31,4 @@ for name in os.listdir(os.path.join(".", "tests")):
         num_tests += 1
         run_test(path, name)
 
-print("-- " + ANSI_BOLD + str(num_passed_tests) + "/" + str(num_tests) + " tests passed" + ANSI_END)
+print("---- " + ANSI_BOLD + str(num_passed_tests) + "/" + str(num_tests) + " tests passed" + ANSI_END)
