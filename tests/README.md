@@ -8,3 +8,6 @@ Testing if tokenizer can detect an integer at end of file correctly.
 
 ## tokenizer-03
 Testing if tokenizer can detect identifiers, integers and symbols correctly with whitespace between them.
+
+## tokenizer-04
+Testing if tokenizer sets token line and column numbers correctly.
