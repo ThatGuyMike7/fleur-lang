@@ -44,15 +44,19 @@ namespace Fleur
         EQUAL,
         LESS_OR_EQUAL,
         GREATER_OR_EQUAL,
-        DOUBLE_COLON
+        DOUBLE_COLON,
+        RIGHT_ARROW
     };
 
     struct Token
     {
         TokenType type;
         std::string_view string;
-        u64 lineNumber;
-        u64 lineColumn;
+        u64 line;
+        u64 column;
+
+        // Returns the column of the last character of the token.
+        u64 ColumnEnd() const;
     };
 
     struct SymbolToken
@@ -93,7 +97,8 @@ namespace Fleur
         { "==", TokenType::EQUAL },
         { "<=", TokenType::LESS_OR_EQUAL },
         { ">=", TokenType::GREATER_OR_EQUAL },
-        { "::", TokenType::DOUBLE_COLON }
+        { "::", TokenType::DOUBLE_COLON },
+        { "->", TokenType::RIGHT_ARROW }
     };
 
     // Returns every element of `SYMBOL_TOKENS` whose first character equals `c`.
@@ -105,39 +110,51 @@ namespace Fleur
     SymbolToken const* MatchSymbolToken(std::vector<SymbolToken const*> const &symbolTokens,
         std::string_view match);
 
-    class Tokenizer
+    class TokenizerData
     {
     public:
-        Tokenizer(Util::String &&source);
-        ~Tokenizer();
-
-        void Tokenize();
-        std::vector<Token> const Tokens() const;
-
-    private:
-        Util::String source;
-        u64 index;
-
-        u64 lineColumn;
-        u64 lineNumber;
+        TokenizerData(Util::String &&source);
+        ~TokenizerData();
+        TokenizerData(TokenizerData &&other);
 
         std::vector<Token> tokens;
 
-        bool Peek(char *peek, u64 amount = 1);
+        Util::String const& Source() const;
+
+    private:
+        TokenizerData(TokenizerData const&) = delete;
+        TokenizerData& operator=(TokenizerData const&) = delete;
+        TokenizerData& operator=(TokenizerData&&) = delete;
+
+        Util::String source;
+    };
+
+    class Tokenizer
+    {
+    public:
+        TokenizerData Tokenize(Util::String &&source);
+
+    private:
+        u64 index;
+        u64 column;
+        u64 line;
+
+        bool Peek(Util::String const &source, char *peek, u64 amount = 1);
 
         // Note: Only eat what you peeked before!
         void Eat(u64 amount = 1);
 
         // Skip whitespace and manage line number.
-        bool EatWhitespace();
+        bool EatWhitespace(Util::String const &source);
 
-        void AddIdentifierToken(std::string_view string);
-        void AddIntegerToken(std::string_view string);
-        void AddSymbolToken(std::string_view string, TokenType tokenType);
+        void AddIdentifierToken(std::vector<Token> *tokens, std::string_view string);
+        void AddIntegerToken(std::vector<Token> *tokens, std::string_view string);
+        void AddSymbolToken(std::vector<Token> *tokens, std::string_view string,
+            TokenType tokenType);
 
-        bool Identifier();
-        bool Number();
-        bool SymbolToken();
+        bool Identifier(std::vector<Token> *tokens, Util::String const &source);
+        bool Number(std::vector<Token> *tokens, Util::String const &source);
+        bool SymbolToken(std::vector<Token> *tokens, Util::String const &source);
     };
 }
 

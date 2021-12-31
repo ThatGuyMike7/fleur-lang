@@ -2,20 +2,20 @@
 
 int main()
 {
-    Fleur::Tokenizer tokenizer{ Fleur::Util::ReadFile("test.txt") };
-    tokenizer.Tokenize();
+    Fleur::Tokenizer tokenizer;
+    Fleur::TokenizerData data = tokenizer.Tokenize(Fleur::Util::ReadFile("test.txt"));
 
-    if (tokenizer.Tokens().size() != 1)
+    if (data.tokens.size() != 1)
     {
         return 1;
     }
 
-    if (tokenizer.Tokens()[0].type != Fleur::TokenType::INTEGER)
+    if (data.tokens[0].type != Fleur::TokenType::INTEGER)
     {
         return 2;
     }
 
-    if (tokenizer.Tokens()[0].string != "42")
+    if (data.tokens[0].string != "42")
     {
         return 3;
     }

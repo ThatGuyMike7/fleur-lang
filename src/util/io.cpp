@@ -7,11 +7,6 @@
 
 namespace Fleur::Util
 {
-    void String::Free()
-    {
-        std::free(this->data);
-    }
-
     String ReadFile(std::string_view path)
     {
         constexpr u64 INITIAL_SIZE = 1024;

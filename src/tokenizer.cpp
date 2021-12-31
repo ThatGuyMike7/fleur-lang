@@ -9,6 +9,11 @@
 
 namespace Fleur
 {
+    u64 Token::ColumnEnd() const
+    {
+        return column + string.length();
+    }
+
     std::vector<SymbolToken const*> SymbolTokensWithFirstChar(char c)
     {
         std::vector<SymbolToken const*> result;
@@ -53,17 +58,28 @@ namespace Fleur
         return nullptr;
     }
 
-    Tokenizer::Tokenizer(Util::String &&source)
+    TokenizerData::TokenizerData(Util::String &&source)
         : source(std::move(source))
     {
     }
 
-    Tokenizer::~Tokenizer()
+    TokenizerData::~TokenizerData()
     {
         source.Free();
     }
 
-    bool Tokenizer::Peek(char *peek, u64 amount)
+    TokenizerData::TokenizerData(TokenizerData &&other)
+        : source(std::move(other.source)), tokens(std::move(other.tokens))
+    {
+        other.source.data = nullptr; // Avoid double-free.
+    }
+
+    Util::String const& TokenizerData::Source() const
+    {
+        return source;
+    }
+
+    bool Tokenizer::Peek(Util::String const &source, char *peek, u64 amount)
     {
         if (index + amount >= source.length)
         {
@@ -77,28 +93,28 @@ namespace Fleur
     void Tokenizer::Eat(u64 amount)
     {
         index += amount;
-        lineColumn += amount;
+        column += amount;
     }
 
-    bool Tokenizer::EatWhitespace()
+    bool Tokenizer::EatWhitespace(Util::String const &source)
     {
         while (true)
         {
             char c;
-            if (!Peek(&c))
+            if (!Peek(source, &c))
             {
                 return false;
             }
 
             if (c == '\n')
             {
-                lineNumber++;
-                lineColumn = 0;
+                line++;
+                column = 0;
                 index++;
             }
             else if (Util::IsWhitespaceNoNewline(c))
             {
-                lineColumn++;
+                column++;
                 index++;
             }
             else
@@ -108,22 +124,23 @@ namespace Fleur
         }
     }
 
-    void Tokenizer::AddIdentifierToken(std::string_view string)
+    void Tokenizer::AddIdentifierToken(std::vector<Token> *tokens, std::string_view string)
     {
-        tokens.push_back(Token{ TokenType::IDENTIFIER, string, lineNumber, lineColumn });
+        tokens->push_back(Token{ TokenType::IDENTIFIER, string, line, column });
     }
 
-    void Tokenizer::AddIntegerToken(std::string_view string)
+    void Tokenizer::AddIntegerToken(std::vector<Token> *tokens, std::string_view string)
     {
-        tokens.push_back(Token{ TokenType::INTEGER, string, lineNumber, lineColumn });
+        tokens->push_back(Token{ TokenType::INTEGER, string, line, column });
     }
 
-    void Tokenizer::AddSymbolToken(std::string_view string, TokenType tokenType)
+    void Tokenizer::AddSymbolToken(std::vector<Token> *tokens, std::string_view string,
+        TokenType tokenType)
     {
-        tokens.push_back(Token{ tokenType, string, lineNumber, lineColumn });
+        tokens->push_back(Token{ tokenType, string, line, column });
     }
 
-    bool Tokenizer::Identifier()
+    bool Tokenizer::Identifier(std::vector<Token> *tokens, Util::String const &source)
     {
         char const *begin = source.data + index;
         u64 size = 1;
@@ -131,9 +148,9 @@ namespace Fleur
         while (true)
         {
             char peek;
-            if (!Peek(&peek, size))
+            if (!Peek(source, &peek, size))
             {
-                AddIdentifierToken(std::string_view{ begin, size });
+                AddIdentifierToken(tokens, std::string_view{ begin, size });
                 Eat(size - 1);
                 return false;
             }
@@ -144,14 +161,14 @@ namespace Fleur
             }
             else
             {
-                AddIdentifierToken(std::string_view{ begin, size });
+                AddIdentifierToken(tokens, std::string_view{ begin, size });
                 Eat(size - 1);
                 return true;
             }
         }
     }
 
-    bool Tokenizer::Number()
+    bool Tokenizer::Number(std::vector<Token> *tokens, Util::String const &source)
     {
         char const *begin = source.data + index;
         u64 size = 1;
@@ -159,9 +176,9 @@ namespace Fleur
         while (true)
         {
             char peek;
-            if (!Peek(&peek, size))
+            if (!Peek(source, &peek, size))
             {
-                AddIntegerToken(std::string_view{ begin, size });
+                AddIntegerToken(tokens, std::string_view{ begin, size });
                 Eat(size - 1);
                 return false;
             }
@@ -172,14 +189,14 @@ namespace Fleur
             }
             else
             {
-                AddIntegerToken(std::string_view{ begin, size });
+                AddIntegerToken(tokens, std::string_view{ begin, size });
                 Eat(size - 1);
                 return true;
             }
         }
     }
 
-    bool Tokenizer::SymbolToken()
+    bool Tokenizer::SymbolToken(std::vector<Token> *tokens, Util::String const &source)
     {
         std::string str;
         str += source.data[index];
@@ -190,7 +207,7 @@ namespace Fleur
             auto temp = candidates;
 
             char peek;
-            if (!Peek(&peek, str.length()))
+            if (!Peek(source, &peek, str.length()))
             {
                 // This is a situation where the string we have is shorter than some candidates.
                 // Find the element that matches exactly.
@@ -202,7 +219,7 @@ namespace Fleur
                 }
                 else
                 {
-                    AddSymbolToken(match->string, match->tokenType);
+                    AddSymbolToken(tokens, match->string, match->tokenType);
                 }
 
                 Eat(str.length() - 1);
@@ -242,65 +259,62 @@ namespace Fleur
         }
         else
         {
-            AddSymbolToken(match->string, match->tokenType);
+            AddSymbolToken(tokens, match->string, match->tokenType);
         }
 
         Eat(str.length() - 1);
         return true;
     }
 
-    void Tokenizer::Tokenize()
+    TokenizerData Tokenizer::Tokenize(Util::String &&source)
     {
-        if (source.length == 0)
+        TokenizerData data{ std::move(source) };
+
+        if (data.Source().length == 0)
         {
             // Empty file.
-            return;
+            return data;
         }
 
-        index = static_cast<u64>(-1); // Wraparound is defined for unsigned types.
-        lineColumn = 0;
-        lineNumber = 1;
+        index = static_cast<u64>(-1); // Wraparound is defined for unsigned integer types.
+        column = 0;
+        line = 1;
 
         while (true)
         {
-            if (!EatWhitespace())
+            if (!EatWhitespace(data.Source()))
             {
-                return;
+                return data;
             }
 
             char c;
-            if (!Peek(&c))
+            if (!Peek(data.Source(), &c))
             {
-                return;
+                return data;
             }
             Eat();
 
             if (Util::IsLetter(c))
             {
-                if (!Identifier())
+                if (!Identifier(&data.tokens, data.Source()))
                 {
-                    return;
+                    return data;
                 }
             }
             else if (Util::IsDigit(c))
             {
-                if (!Number())
+                if (!Number(&data.tokens, data.Source()))
                 {
-                    return;
+                    return data;
                 }
             }
             else
             {
-                if (!SymbolToken())
+                if (!SymbolToken(&data.tokens, data.Source()))
                 {
-                    return;
+                    return data;
                 }
             }
         }
-    }
-
-    std::vector<Token> const Tokenizer::Tokens() const
-    {
-        return tokens;
     }
 }

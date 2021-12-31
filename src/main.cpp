@@ -5,25 +5,17 @@
 
 int main()
 {
-    Fleur::Tokenizer tokenizer{ Fleur::Util::ReadFile("CMakeLists.txt") };
-    tokenizer.Tokenize();
+    Fleur::Tokenizer tokenizer;
+    Fleur::TokenizerData data = tokenizer.Tokenize(Fleur::Util::ReadFile("CMakeLists.txt"));
 
-    for (Fleur::u64 i = 0; i < tokenizer.Tokens().size(); i++)
+    if (data.Source().data == nullptr)
     {
-        if (tokenizer.Tokens()[i].type == Fleur::TokenType::IDENTIFIER)
-        {
-            std::cout << "Identifier: ";
-        }
-        else if (tokenizer.Tokens()[i].type == Fleur::TokenType::INTEGER)
-        {
-            std::cout << "Integer: ";
-        }
-        else
-        {
-            std::cout << "Symbol Token with ID " << static_cast<Fleur::u64>(tokenizer.Tokens()[i].type) << ": ";
-        }
+        return 1;
+    }
 
-        std::cout << tokenizer.Tokens()[i].string << std::endl;
+    for (Fleur::u64 i = 0; i < data.tokens.size(); i++)
+    {
+        std::cout << data.tokens[i].string << std::endl;
     }
 
     return 0;

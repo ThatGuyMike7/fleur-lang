@@ -1,4 +1,6 @@
 #include <util/string.hpp>
+#include <cstdlib>
+#include <iostream>
 
 namespace Fleur::Util
 {
@@ -30,5 +32,10 @@ namespace Fleur::Util
     bool IsDigit(char c)
     {
         return (c >= 48 && c <= 57);
+    }
+
+    void String::Free()
+    {
+        std::free(this->data);
     }
 }
