@@ -7,6 +7,7 @@
 
 namespace Fleur::Util
 {
+    // Sets `String::data` to `nullptr` on error.
     String ReadFile(std::string_view path);
 }
 

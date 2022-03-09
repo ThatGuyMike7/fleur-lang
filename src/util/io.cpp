@@ -18,7 +18,7 @@ namespace Fleur::Util
         FILE *stream = std::fopen(path.data(), "r");
         if (stream == nullptr)
         {
-            return {};
+            return String{ nullptr };
         }
 
         // Disable internal stream buffering.
@@ -57,12 +57,12 @@ namespace Fleur::Util
         {
             std::fclose(stream);
             std::free(contents.data);
-            return {};
+            return String{ nullptr };
         }
 
         // EOF was not reached.
         std::fclose(stream);
         std::free(contents.data);
-        return {};
+        return String{ nullptr };
     }
 }

@@ -11,6 +11,7 @@ namespace Fleur
 {
     enum class TokenType : u64
     {
+        UNKNOWN,
         IDENTIFIER,
         INTEGER,
         LINE_COMMENT,
@@ -46,17 +47,6 @@ namespace Fleur
         GREATER_OR_EQUAL,
         DOUBLE_COLON,
         RIGHT_ARROW
-    };
-
-    struct Token
-    {
-        TokenType type;
-        std::string_view string;
-        u64 line;
-        u64 column;
-
-        // Returns the column of the last character of the token.
-        u64 ColumnEnd() const;
     };
 
     struct SymbolToken
@@ -110,6 +100,17 @@ namespace Fleur
     SymbolToken const* MatchSymbolToken(std::vector<SymbolToken const*> const &symbolTokens,
         std::string_view match);
 
+    struct Token
+    {
+        TokenType type;
+        std::string_view string;
+        u64 line;
+        u64 column;
+
+        // Returns the column of the last character of the token.
+        u64 LastColumn() const;
+    };
+
     class TokenizerData
     {
     public:
@@ -118,7 +119,6 @@ namespace Fleur
         TokenizerData(TokenizerData &&other);
 
         std::vector<Token> tokens;
-
         Util::String const& Source() const;
 
     private:

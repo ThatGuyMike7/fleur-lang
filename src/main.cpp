@@ -1,22 +1,24 @@
 #include <common.hpp>
+#include <string.hpp>
+#include <io.hpp>
 #include <tokenizer.hpp>
+#include <parser.hpp>
 
 #include <iostream>
 
 int main()
 {
+    Fleur::Util::String file = Fleur::Util::ReadFile("CMakeLists.txt");
+    if (file.data == nullptr)
+        return 0;
+
     Fleur::Tokenizer tokenizer;
-    Fleur::TokenizerData data = tokenizer.Tokenize(Fleur::Util::ReadFile("CMakeLists.txt"));
+    Fleur::TokenizerData tokenizerData = tokenizer.Tokenize(std::move(file));
+    if (tokenizerData.tokens.size() == 0)
+        return 0;
 
-    if (data.Source().data == nullptr)
-    {
-        return 1;
-    }
-
-    for (Fleur::u64 i = 0; i < data.tokens.size(); i++)
-    {
-        std::cout << data.tokens[i].string << std::endl;
-    }
+    Fleur::Parser parser;
+    Fleur::ParserData parserData = parser.Parse(&tokenizerData);
 
     return 0;
 }

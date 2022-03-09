@@ -9,7 +9,7 @@
 
 namespace Fleur
 {
-    u64 Token::ColumnEnd() const
+    u64 Token::LastColumn() const
     {
         return column + string.length();
     }
@@ -198,6 +198,9 @@ namespace Fleur
 
     bool Tokenizer::SymbolToken(std::vector<Token> *tokens, Util::String const &source)
     {
+        // FIXME: This code is slow and pretty garbage, but it works.
+        //        Write properly at some point.
+
         std::string str;
         str += source.data[index];
 
